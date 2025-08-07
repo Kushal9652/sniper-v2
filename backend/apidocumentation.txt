@@ -1,0 +1,330 @@
+# Sniper Backend API Documentation
+
+## 1. User Registration API
+
+### Endpoint
+```
+POST /api/auth/register
+```
+
+### Description
+Registers a new user in the Sniper system. Requires a unique username and email. Password is securely hashed before storage.
+
+### Request Body
+```
+{
+  "username": "string",   // required, unique
+  "email": "string",      // required, unique, valid email
+  "password": "string"    // required, min 6 chars
+}
+```
+
+### Response
+- **201 Created**
+```
+{
+  "success": true,
+  "data": {
+    "_id": "user_id",
+    "username": "string",
+    "email": "string",
+    "role": "user",
+    "token": "JWT_TOKEN"
+  }
+}
+```
+- **400 Bad Request** (if user/email exists or validation fails)
+- **500 Server Error**
+
+### Architecture
+- **Route:** `/api/auth/register` (POST)
+- **Controller:** Handles validation, checks for existing user/email, hashes password, creates user, returns JWT token.
+- **Model:** `User` (Mongoose schema)
+- **Security:** Password is hashed with bcryptjs before saving. JWT is generated for authentication.
+- **Error Handling:** Returns appropriate error messages for duplicate users, validation errors, or server issues.
+
+### Sequence Diagram
+
+User → [POST /api/auth/register] → Backend → [Check user/email] → [Hash password] → [Create user] → [Generate JWT] → User
+
+### Curl Testing Commands
+
+```bash
+# Register a new user
+curl -X POST http://localhost:5000/api/auth/register \
+  -H "Content-Type: application/json" \
+  -d '{
+    "username": "testuser",
+    "email": "test@example.com",
+    "password": "password123"
+  }'
+```
+
+## 2. User Login API
+
+### Endpoint
+```
+POST /api/auth/login
+```
+
+### Description
+Authenticates a user using email and password. Returns a JWT token if credentials are valid.
+
+### Request Body
+```
+{
+  "email": "string",      // required, must match registered email
+  "password": "string"    // required
+}
+```
+
+### Response
+- **200 OK**
+```
+{
+  "success": true,
+  "data": {
+    "_id": "user_id",
+    "username": "string",
+    "email": "string",
+    "role": "user",
+    "token": "JWT_TOKEN"
+  }
+}
+```
+- **401 Unauthorized** (if credentials are invalid)
+- **500 Server Error**
+
+### Architecture
+- **Route:** `/api/auth/login` (POST)
+- **Controller:** Finds user by email, compares password with bcryptjs, returns JWT if valid.
+- **Model:** `User` (Mongoose schema)
+- **Security:** Password is never returned. JWT is generated for authentication.
+- **Error Handling:** Returns error for invalid credentials or server issues.
+
+### Sequence Diagram
+
+User → [POST /api/auth/login] → Backend → [Find user by email] → [Compare password] → [Generate JWT] → User
+
+### Curl Testing Commands
+
+```bash
+# Login user
+curl -X POST http://localhost:5001/api/auth/login \
+  -H "Content-Type: application/json" \
+  -d '{
+    "email": "test@example.com",
+    "password": "password123"
+  }'
+```
+
+---
+
+## 3. Get User Profile API
+
+### Endpoint
+```
+GET /api/users/profile
+```
+
+### Description
+Fetches the profile of the currently authenticated user. Requires a valid JWT token in the Authorization header.
+
+### Request Headers
+```
+Authorization: Bearer JWT_TOKEN
+```
+
+### Response
+- **200 OK**
+```
+{
+  "success": true,
+  "data": {
+    "_id": "user_id",
+    "username": "string",
+    "email": "string",
+    "role": "user",
+    "lastLogin": "timestamp"
+  }
+}
+```
+- **401 Unauthorized** (if token is missing or invalid)
+- **500 Server Error**
+
+### Architecture
+- **Route:** `/api/users/profile` (GET)
+- **Controller:** Finds user by ID from JWT, returns user data (excluding password).
+- **Model:** `User` (Mongoose schema)
+- **Security:** Requires valid JWT. Password is never returned.
+- **Error Handling:** Returns error for invalid token or server issues.
+
+### Curl Testing Command
+```bash
+curl -X GET http://localhost:5001/api/users/profile \
+  -H "Authorization: Bearer YOUR_TOKEN_HERE"
+```
+
+---
+
+## 4. Update User Profile API
+
+### Endpoint
+```
+PUT /api/users/profile
+```
+
+### Description
+Updates the username and/or email of the authenticated user. Requires a valid JWT token.
+
+### Request Headers
+```
+Authorization: Bearer JWT_TOKEN
+Content-Type: application/json
+```
+
+### Request Body
+```
+{
+  "username": "newusername",   // optional, must be unique
+  "email": "newemail@example.com" // optional, must be unique
+}
+```
+
+### Response
+- **200 OK**
+```
+{
+  "success": true,
+  "data": {
+    "_id": "user_id",
+    "username": "newusername",
+    "email": "newemail@example.com",
+    "role": "user",
+    "lastLogin": "timestamp"
+  }
+}
+```
+- **400 Bad Request** (if username/email already exists)
+- **401 Unauthorized**
+- **500 Server Error**
+
+### Architecture
+- **Route:** `/api/users/profile` (PUT)
+- **Controller:** Finds user by ID from JWT, updates username/email if provided and unique.
+- **Model:** `User` (Mongoose schema)
+- **Security:** Requires valid JWT. Password is never returned.
+- **Error Handling:** Returns error for duplicate username/email or server issues.
+
+### Curl Testing Command
+```bash
+curl -X PUT http://localhost:5001/api/users/profile \
+  -H "Authorization: Bearer YOUR_TOKEN_HERE" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "username": "newusername",
+    "email": "newemail@example.com"
+  }'
+```
+
+---
+
+## 5. Delete User Account API
+
+### Endpoint
+```
+DELETE /api/users/profile
+```
+
+### Description
+Deletes the authenticated user's account. Requires a valid JWT token.
+
+### Request Headers
+```
+Authorization: Bearer JWT_TOKEN
+```
+
+### Response
+- **200 OK**
+```
+{
+  "success": true,
+  "message": "Account deleted successfully"
+}
+```
+- **401 Unauthorized**
+- **404 Not Found** (if user does not exist)
+- **500 Server Error**
+
+### Architecture
+- **Route:** `/api/users/profile` (DELETE)
+- **Controller:** Finds user by ID from JWT, deletes user from database.
+- **Model:** `User` (Mongoose schema)
+- **Security:** Requires valid JWT.
+- **Error Handling:** Returns error for invalid token, user not found, or server issues.
+
+### Curl Testing Command
+```bash
+curl -X DELETE http://localhost:5001/api/users/profile \
+  -H "Authorization: Bearer YOUR_TOKEN_HERE"
+```
+
+---
+
+## 6. Get All Users (Admin Only)
+
+### Endpoint
+```
+GET /api/users
+```
+
+### Description
+Fetches all users in the system. Requires a valid JWT token for an admin user.
+
+### Request Headers
+```
+Authorization: Bearer ADMIN_TOKEN_HERE
+```
+
+### Response
+- **200 OK**
+```
+{
+  "success": true,
+  "count": 2,
+  "data": [
+    {
+      "_id": "user_id1",
+      "username": "user1",
+      "email": "user1@example.com",
+      "role": "user",
+      "lastLogin": "timestamp"
+    },
+    {
+      "_id": "user_id2",
+      "username": "user2",
+      "email": "user2@example.com",
+      "role": "admin",
+      "lastLogin": "timestamp"
+    }
+  ]
+}
+```
+- **401 Unauthorized** (if not admin)
+- **500 Server Error**
+
+### Architecture
+- **Route:** `/api/users` (GET)
+- **Controller:** Checks JWT, verifies admin role, returns all users.
+- **Model:** `User` (Mongoose schema)
+- **Security:** Requires valid JWT and admin role.
+- **Error Handling:** Returns error for unauthorized access or server issues.
+
+### Curl Testing Command
+```bash
+curl -X GET http://localhost:5001/api/users \
+  -H "Authorization: Bearer ADMIN_TOKEN_HERE"
+```
+
+---
+
