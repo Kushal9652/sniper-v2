@@ -10,7 +10,7 @@ const router = express.Router();
 router.get('/', protect, authorize('admin'), async (req, res) => {
   try {
     const users = await User.find({}).select('-password');
-    
+
     res.json({
       success: true,
       count: users.length,
@@ -31,7 +31,7 @@ router.get('/', protect, authorize('admin'), async (req, res) => {
 router.get('/profile', protect, async (req: any, res) => {
   try {
     const user = await User.findById(req.user._id).select('-password');
-    
+
     res.json({
       success: true,
       data: user
@@ -50,7 +50,17 @@ router.get('/profile', protect, async (req: any, res) => {
 // @access  Private
 router.put('/profile', protect, async (req: any, res) => {
   try {
-    const { username, email } = req.body;
+    const {
+      username,
+      email,
+      fullName,
+      bio,
+      company,
+      location,
+      website,
+      phone,
+      preferences
+    } = req.body;
 
     const user = await User.findById(req.user._id);
 
@@ -84,6 +94,27 @@ router.put('/profile', protect, async (req: any, res) => {
       user.email = email;
     }
 
+    // Update optional fields
+    if (fullName !== undefined) user.fullName = fullName;
+    if (bio !== undefined) user.bio = bio;
+    if (company !== undefined) user.company = company;
+    if (location !== undefined) user.location = location;
+    if (website !== undefined) user.website = website;
+    if (phone !== undefined) user.phone = phone;
+
+    // Update preferences
+    if (preferences) {
+      if (preferences.notifications !== undefined) {
+        user.preferences.notifications = preferences.notifications;
+      }
+      if (preferences.newsletter !== undefined) {
+        user.preferences.newsletter = preferences.newsletter;
+      }
+      if (preferences.twoFactorEnabled !== undefined) {
+        user.preferences.twoFactorEnabled = preferences.twoFactorEnabled;
+      }
+    }
+
     const updatedUser = await user.save();
 
     res.json({
@@ -93,7 +124,19 @@ router.put('/profile', protect, async (req: any, res) => {
         username: updatedUser.username,
         email: updatedUser.email,
         role: updatedUser.role,
-        lastLogin: updatedUser.lastLogin
+        isActive: updatedUser.isActive,
+        lastLogin: updatedUser.lastLogin,
+        createdAt: updatedUser.createdAt,
+        updatedAt: updatedUser.updatedAt,
+        fullName: updatedUser.fullName,
+        bio: updatedUser.bio,
+        company: updatedUser.company,
+        location: updatedUser.location,
+        website: updatedUser.website,
+        phone: updatedUser.phone,
+        avatar: updatedUser.avatar,
+        preferences: updatedUser.preferences,
+        stats: updatedUser.stats
       }
     });
   } catch (error) {
